@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meta Ads Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#FFF8F9;--sur:#FFFFFF;--sur2:#FFF0F3;--bdr:#F5D6DD;--bdr2:#EDBED0;
+  --pink:#E8427C;--pink2:#F472A8;--pink3:#FFB3CE;--pink4:#FDE8EF;
+  --dark:#2D1B24;--mid:#7A4A5A;--light:#B08090;
+  --ok:#2EC4A0;--pause:#E8427C;--warn:#F4A23E;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh}
+.app{max-width:1080px;margin:0 auto;padding:40px 28px 80px}
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:40px;gap:20px;padding-bottom:32px;border-bottom:1.5px solid var(--bdr)}
+.logo-badge{display:inline-flex;align-items:center;gap:8px;background:var(--pink4);border:1px solid var(--pink3);border-radius:100px;padding:6px 14px;margin-bottom:16px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--pink);animation:pulse 2s infinite}
+.logo-text{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--pink);text-transform:uppercase}
+h1{font-family:'Playfair Display',serif;font-size:clamp(32px,5vw,52px);font-weight:700;line-height:1.05;color:var(--dark);margin-bottom:6px}
+h1 em{font-style:italic;color:var(--pink)}
+.period-pill{background:var(--pink4);border:1px solid var(--pink3);border-radius:100px;padding:8px 18px;font-family:'DM Mono',monospace;font-size:11px;color:var(--pink);display:inline-block}
+.date-text{font-size:11px;color:var(--light);margin-top:6px;font-family:'DM Mono',monospace}
+.upload-zone{border:1.5px dashed var(--bdr2);border-radius:16px;padding:22px 28px;margin-bottom:36px;cursor:pointer;transition:all .25s;display:flex;align-items:center;gap:18px;background:var(--sur)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--pink);background:var(--pink4)}
+.uz-icon{width:44px;height:44px;border-radius:12px;background:var(--pink4);border:1px solid var(--pink3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.uz-title{font-size:14px;font-weight:600;color:var(--dark);margin-bottom:3px}
+.uz-sub{font-size:12px;color:var(--light)}
+.uz-btn{margin-left:auto;padding:11px 22px;background:var(--pink);border:none;border-radius:100px;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .2s}
+.uz-btn:hover{background:#D03870;transform:translateY(-1px)}
+input[type=file]{display:none}
+.sec-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--light);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--bdr)}
+.alerts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;margin-bottom:36px}
+.alert-card{border-radius:14px;padding:18px;border:1px solid;background:var(--sur)}
+.alert-card.pause{border-color:#F9BED0;background:#FFF5F8}
+.alert-card.scale{border-color:#A8E8DC;background:#F0FBF8}
+.alert-card.warn{border-color:#FAD9A8;background:#FFF8EE}
+.a-tag{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:100px;margin-bottom:12px;font-family:'DM Mono',monospace}
+.pause .a-tag{background:#FFE0EA;color:var(--pause)}
+.scale .a-tag{background:#C8F0E8;color:#1A9E84}
+.warn .a-tag{background:#FDECD0;color:#C07818}
+.a-marca{font-size:10px;color:var(--light);margin-bottom:5px;font-family:'DM Mono',monospace}
+.a-titulo{font-size:13px;font-weight:600;color:var(--dark);margin-bottom:7px;line-height:1.4}
+.a-dato{font-size:12px;color:var(--mid);line-height:1.6}
+.a-accion{margin-top:12px;font-size:12px;font-weight:600;padding:8px 16px;border-radius:100px;cursor:pointer;border:1.5px solid;background:transparent;display:inline-block}
+.pause .a-accion{color:var(--pause);border-color:#F9BED0}
+.scale .a-accion{color:#1A9E84;border-color:#A8E8DC}
+.warn .a-accion{color:#C07818;border-color:#FAD9A8}
+.marcas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:36px}
+.marca-card{background:var(--sur);border:1.5px solid var(--bdr);border-radius:16px;overflow:hidden;cursor:pointer;transition:all .22s}
+.marca-card:hover{border-color:var(--pink3);transform:translateY(-3px);box-shadow:0 8px 24px rgba(232,66,124,.08)}
+.mc-accent{height:4px}
+.mc-head{padding:18px 20px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--bdr)}
+.mc-nombre{font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:var(--dark);flex:1}
+.mc-status{font-size:10px;padding:4px 12px;border-radius:100px;font-family:'DM Mono',monospace;font-weight:600}
+.st-ok{background:#E8FAF5;color:#1A9E84;border:1px solid #A8E8DC}
+.st-alert{background:#FFF0F4;color:var(--pause);border:1px solid #F9BED0}
+.st-warn{background:#FFF8EE;color:#C07818;border:1px solid #FAD9A8}
+.mc-body{padding:18px 20px}
+.kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+.kpi{text-align:center;padding:12px 8px;background:var(--bg);border-radius:10px}
+.kpi-val{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--dark);line-height:1;margin-bottom:4px}
+.kpi-val.up{color:var(--ok)}.kpi-val.down{color:var(--pause)}
+.kpi-label{font-size:9px;color:var(--light);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em}
+.kpi-delta{font-size:11px;margin-top:3px;font-family:'DM Mono',monospace}
+.kpi-delta.up{color:var(--ok)}.kpi-delta.down{color:var(--pause)}
+.mc-insight{font-size:12px;color:var(--mid);line-height:1.6;padding-top:12px;border-top:1px solid var(--bdr)}
+.hist-list{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.hist-item{background:var(--sur);border:1.5px solid var(--bdr);border-radius:12px;padding:14px 20px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:all .2s}
+.hist-item:hover{border-color:var(--pink3);background:var(--pink4)}
+.hist-period{font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--dark);flex:1}
+.hist-meta{font-size:11px;color:var(--light);font-family:'DM Mono',monospace}
+.hist-brands{display:flex;gap:5px}
+.hist-dot{width:8px;height:8px;border-radius:50%}
+.btn-del{padding:7px 14px;background:none;border:1.5px solid var(--bdr);border-radius:100px;color:var(--light);font-size:11px;cursor:pointer;transition:all .2s}
+.btn-del:hover{border-color:var(--pause);color:var(--pause)}
+.empty{text-align:center;padding:56px 24px;background:var(--sur);border:1.5px dashed var(--bdr);border-radius:16px}
+.empty-icon{font-size:48px;margin-bottom:16px;opacity:.5}
+.empty-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--mid);margin-bottom:8px}
+.empty-sub{font-size:13px;color:var(--light);line-height:1.7}
+.loading{text-align:center;padding:36px;color:var(--mid)}
+.spinner{display:inline-block;width:22px;height:22px;border:2px solid var(--bdr2);border-top-color:var(--pink);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:12px}
+.toast{position:fixed;bottom:28px;right:28px;background:var(--sur);border:1.5px solid var(--bdr2);border-radius:12px;padding:13px 22px;font-size:13px;z-index:200;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none;box-shadow:0 4px 20px rgba(232,66,124,.1)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.ok{border-color:#A8E8DC;color:#1A9E84}
+.toast.err{border-color:#F9BED0;color:var(--pause)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@media(max-width:600px){.marcas-grid,.alerts-grid{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}.header{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div>
+      <div class="logo-badge"><div class="logo-dot"></div><span class="logo-text">Meta Ads Intelligence</span></div>
+      <h1>Campaign<br><em>Dashboard</em></h1>
+    </div>
+    <div style="text-align:right;padding-top:8px">
+      <div class="period-pill" id="period-pill">Sin datos cargados</div>
+      <div class="date-text" id="last-update"></div>
+    </div>
+  </div>
+  <div class="upload-zone" id="drop-zone">
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv">
+    <div class="uz-icon">📊</div>
+    <div><div class="uz-title">Cargar nuevo reporte</div><div class="uz-sub">Arrastra el Excel generado por n8n o haz clic para seleccionar</div></div>
+    <button class="uz-btn" onclick="document.getElementById('file-input').click()">Subir reporte</button>
+  </div>
+  <div id="alerts-wrap" style="display:none">
+    <div class="sec-label">Acciones urgentes esta semana</div>
+    <div class="alerts-grid" id="alerts-grid"></div>
+  </div>
+  <div id="marcas-wrap" style="display:none">
+    <div class="sec-label">Rendimiento por marca</div>
+    <div class="marcas-grid" id="marcas-grid"></div>
+  </div>
+  <div class="sec-label" style="margin-top:36px">Historial de reportes</div>
+  <div id="hist-wrap">
+    <div class="empty"><div class="empty-icon">🌸</div><div class="empty-title">Sin reportes aún</div><div class="empty-sub">Sube tu primer Excel de Meta Ads para comenzar.<br>Los reportes se guardan automáticamente mes a mes.</div></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const BRAND_COLORS={seducete:'#E8427C',gonails:'#2EC4A0',gohair:'#F472A8',bluesky:'#7B9CF4','nail pro':'#F4A23E','le mini':'#C97BD4','nail outlet':'#F4A23E'};
+function getBrandColor(n){const k=n.toLowerCase();for(const[b,c]of Object.entries(BRAND_COLORS))if(k.includes(b))return c;return'#E8427C'}
+let reports=[];
+try{const s=localStorage.getItem('mar_reports');if(s)reports=JSON.parse(s)}catch(e){}
+function saveLocal(){try{localStorage.setItem('mar_reports',JSON.stringify(reports))}catch(e){}}
+function toast(msg,type='ok'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;setTimeout(()=>t.className='toast',3000)}
+function sf(v){if(v==null||v==='')return 0;return parseFloat(String(v).replace(/[$,\s]/g,''))||0}
+function pct(n,o){if(!o||o===0)return null;return(n-o)/Math.abs(o)}
+function fmtP(v){if(v==null)return'—';return(v>=0?'+':'')+Math.round(v*100)+'%'}
+function fmtC(v){if(!v)return'$0';return'$'+Math.round(v).toLocaleString('es-CL')}
+function readExcel(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});res(wb)}catch(err){rej(err)}};r.onerror=rej;r.readAsArrayBuffer(file)})}
+function parseReport(wb){
+  const marcas=[];
+  wb.SheetNames.forEach(sn=>{
+    if(['resumen','hallazgo','resultados'].some(x=>sn.toLowerCase().includes(x)))return;
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''});
+    if(rows.length<3)return;
+    let hi=-1;
+    for(let i=0;i<Math.min(rows.length,6);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('anuncio')||c.includes('campaña')||c.includes('gasto'))){hi=i;break}}
+    if(hi<0)return;
+    const H=rows[hi].map(c=>String(c||'').trim());
+    const cG=H.findIndex(h=>h.toLowerCase().includes('gasto')||h.toLowerCase().includes('spent'));
+    const cR=H.findIndex(h=>h.toLowerCase().includes('result')||h.toLowerCase().includes('conv'));
+    const cRA=H.findIndex(h=>h.toLowerCase().includes('anterior')||h.toLowerCase().includes('prev'));
+    const cH=H.findIndex(h=>h.toLowerCase().includes('hook'));
+    const cA=H.findIndex(h=>h.toLowerCase().includes('anuncio')||h.toLowerCase().includes('campaña'));
+    const cS=H.findIndex(h=>h.toLowerCase().includes('status'));
+    const ads=[];
+    for(let i=hi+1;i<rows.length;i++){
+      const row=rows[i];if(!row||row.every(c=>c===''||c==null))continue;
+      const nom=String(row[Math.max(0,cA)]||'').trim();
+      if(!nom||nom.toLowerCase().includes('total')||nom.toLowerCase().includes('leyenda'))continue;
+      const g=cG>=0?sf(row[cG]):0,r=cR>=0?sf(row[cR]):0;if(g===0&&r===0)continue;
+      ads.push({nombre:nom,gasto:g,res:r,resAnt:cRA>=0?sf(row[cRA]):0,hook:cH>=0?sf(row[cH]):0,status:cS>=0?String(row[cS]||''):''});
+    }
+    if(!ads.length)return;
+    const tG=ads.reduce((s,a)=>s+a.gasto,0),tR=ads.reduce((s,a)=>s+a.res,0),tRA=ads.reduce((s,a)=>s+a.resAnt,0);
+    const pausar=ads.filter(a=>a.status.includes('PAUSAR')||a.status.includes('⛔'));
+    const escalar=ads.filter(a=>a.status.includes('GANADOR')||a.status.includes('🏆'));
+    const fatiga=ads.filter(a=>a.status.includes('FATIGA')||a.status.includes('⚠️'));
+    const avgH=ads.filter(a=>a.hook>0).reduce((s,a,_,arr)=>s+a.hook/arr.length,0);
+    marcas.push({nombre:sn,ads,totalGasto:tG,totalRes:tR,totalResAnt:tRA,pausar,escalar,fatiga,avgHook:avgH});
+  });
+  return marcas;
+}
+function renderDashboard(report){
+  const{marcas,period,date}=report;
+  document.getElementById('period-pill').textContent=period||'Período cargado';
+  document.getElementById('last-update').textContent='Actualizado: '+date;
+  const ag=document.getElementById('alerts-grid');ag.innerHTML='';
+  const alertas=[];
+  marcas.forEach(m=>{
+    m.pausar.slice(0,2).forEach(a=>alertas.push({tipo:'pause',marca:m.nombre,titulo:a.nombre.replace('🆕 ','').substring(0,45),dato:'Gasto: '+fmtC(a.gasto)+' · Sin conversiones proporcionales',accion:'Pausar ahora'}));
+    m.escalar.slice(0,1).forEach(a=>alertas.push({tipo:'scale',marca:m.nombre,titulo:a.nombre.replace('🆕 ','').substring(0,45),dato:Math.round(a.res)+' conversiones · Mejor rendimiento del período',accion:'Escalar presupuesto'}));
+    m.fatiga.slice(0,1).forEach(a=>alertas.push({tipo:'warn',marca:m.nombre,titulo:a.nombre.replace('🆕 ','').substring(0,45),dato:'Frecuencia alta · Audiencia sobreexpuesta',accion:'Rotar creativo'}));
+  });
+  if(!alertas.length){ag.innerHTML='<div style="color:var(--light);font-size:13px;grid-column:1/-1;padding:8px 0">No se detectaron alertas urgentes esta semana ✨</div>'}
+  else alertas.slice(0,6).forEach(a=>{const icon=a.tipo==='pause'?'⛔':a.tipo==='scale'?'🚀':'⚠️';const label=a.tipo==='pause'?'Pausar':a.tipo==='scale'?'Escalar':'Fatiga';ag.innerHTML+=`<div class="alert-card ${a.tipo}"><div class="a-tag">${icon} ${label}</div><div class="a-marca">${a.marca}</div><div class="a-titulo">${a.titulo}</div><div class="a-dato">${a.dato}</div><button class="a-accion">${a.accion} →</button></div>`});
+  document.getElementById('alerts-wrap').style.display='block';
+  const mg=document.getElementById('marcas-grid');mg.innerHTML='';
+  marcas.forEach(m=>{
+    const color=getBrandColor(m.nombre);
+    const dR=pct(m.totalRes,m.totalResAnt);
+    const stC=m.pausar.length?'st-alert':m.fatiga.length?'st-warn':'st-ok';
+    const stT=m.pausar.length?'⛔ '+m.pausar.length+' por pausar':m.fatiga.length?'⚠️ Fatiga':'✓ En rango';
+    mg.innerHTML+=`<div class="marca-card"><div class="mc-accent" style="background:${color}"></div><div class="mc-head"><div class="mc-nombre">${m.nombre}</div><div class="mc-status ${stC}">${stT}</div></div><div class="mc-body"><div class="kpi-row"><div class="kpi"><div class="kpi-val" style="font-size:16px">${fmtC(m.totalGasto)}</div><div class="kpi-label">Gasto total</div></div><div class="kpi"><div class="kpi-val ${dR===null?'':(dR>=0?'up':'down')}">${Math.round(m.totalRes).toLocaleString('es-CL')}</div><div class="kpi-label">Resultados</div><div class="kpi-delta ${dR===null?'':(dR>=0?'up':'down')}">${fmtP(dR)} vs ant.</div></div><div class="kpi"><div class="kpi-val" style="font-size:18px">${Math.round(m.avgHook*10)/10||'—'}%</div><div class="kpi-label">Hook Rate</div></div></div><div class="mc-insight">${m.escalar.length?'🏆 '+m.escalar.length+' para escalar  ·  '+'':''} ${m.pausar.length?'⛔ '+m.pausar.length+' para pausar  ·  ':''} ${m.ads.length} anuncios activos</div></div></div>`;
+  });
+  document.getElementById('marcas-wrap').style.display='block';
+}
+function renderHistorial(){
+  const c=document.getElementById('hist-wrap');
+  if(!reports.length){c.innerHTML='<div class="empty"><div class="empty-icon">🌸</div><div class="empty-title">Sin reportes aún</div><div class="empty-sub">Sube tu primer Excel de Meta Ads para comenzar.<br>Los reportes se guardan automáticamente mes a mes.</div></div>';return}
+  c.innerHTML='<div class="hist-list">'+reports.map((r,i)=>`<div class="hist-item" onclick="loadReport(${i})"><div class="hist-brands">${(r.marcas||[]).slice(0,6).map(m=>'<div class="hist-dot" style="background:'+getBrandColor(m.nombre)+'"></div>').join('')}</div><div class="hist-period">${r.period||'Reporte'}</div><div class="hist-meta">${r.date} · ${(r.marcas||[]).length} marcas · ${(r.marcas||[]).reduce((s,m)=>s+m.ads.length,0)} anuncios</div><button class="btn-del" onclick="event.stopPropagation();delReport(${i})">Eliminar</button></div>`).join('')+'</div>';
+}
+function loadReport(i){const r=reports[i];if(r){renderDashboard(r);toast('Reporte cargado: '+r.period)}}
+function delReport(i){reports.splice(i,1);saveLocal();renderHistorial();toast('Eliminado','err')}
+async function processFile(file){
+  const dz=document.getElementById('drop-zone');
+  dz.innerHTML='<div class="loading"><div class="spinner"></div><div style="font-family:DM Mono,monospace;font-size:12px;color:var(--mid)">Leyendo '+file.name+'...</div></div>';
+  try{
+    const wb=await readExcel(file);
+    const marcas=parseReport(wb);
+    if(!marcas.length)throw new Error('No se encontraron datos de marcas en el archivo');
+    const nm=file.name.match(/(\w+)[_-](\d{4})/i);
+    const period=nm?nm[1]+' '+nm[2]:new Date().toLocaleDateString('es-CL',{month:'long',year:'numeric'});
+    const report={period,date:new Date().toLocaleDateString('es-CL'),marcas,filename:file.name};
+    reports.unshift(report);if(reports.length>12)reports=reports.slice(0,12);
+    saveLocal();renderDashboard(report);renderHistorial();
+    toast('✓ '+marcas.length+' marcas cargadas correctamente');
+  }catch(err){toast('Error: '+err.message,'err')}
+  dz.innerHTML='<input type="file" id="file-input" accept=".xlsx,.xls,.csv"><div class="uz-icon">📊</div><div><div class="uz-title">Cargar nuevo reporte</div><div class="uz-sub">Arrastra el Excel generado por n8n o haz clic para seleccionar</div></div><button class="uz-btn" onclick="document.getElementById(\'file-input\').click()">Subir reporte</button>';
+  document.getElementById('file-input').addEventListener('change',function(){if(this.files[0])processFile(this.files[0])});
+}
+document.getElementById('file-input').addEventListener('change',function(){if(this.files[0])processFile(this.files[0])});
+const dz=document.getElementById('drop-zone');
+dz.addEventListener('click',()=>document.getElementById('file-input').click());
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)processFile(f)});
+renderHistorial();
+if(reports.length)renderDashboard(reports[0]);
+</script>
+</body>
+</html>
