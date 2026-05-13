@@ -978,8 +978,8 @@ function renderCamp(c, forceOpen){
         <span>Anuncio</span><span style="text-align:right">Res. actual</span><span style="text-align:right">Res. ant.</span><span style="text-align:right">Δ%</span><span style="text-align:right">Costo/R</span><span style="text-align:right">ROAS</span><span style="text-align:right">Gasto</span>
       </div>`;
     ads.forEach(a=>{
-      const isBest=bestAd&&a.nombre===bestAd.nombre&&ads.length>1;
-      const isWorst=worstAd&&a.nombre===worstAd.nombre&&ads.length>1&&ev.cls==='pausar';
+      const isBest=bestAd&&a===bestAd&&ads.length>1;
+      const isWorst=worstAd&&a===worstAd&&ads.length>1&&ev.cls==='pausar';
       const rowCls=isBest?'best':isWorst?'bad':'';
       const hookPct=Math.min(a.hookRate||0,100);
       const hookColor=hookPct>=25?'var(--green400)':hookPct>=10?'var(--amber400)':'var(--red400)';
