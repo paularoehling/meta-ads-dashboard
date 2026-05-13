@@ -46,9 +46,9 @@ def write_insights_section(ws, row, marca_nombre, insights):
     if not insights:
         return row
 
-    # Encabezado sección
+    # Encabezado sección (minúsculas para que el parser del dashboard no lo detecte como marca)
     ws.merge_cells(f'B{row}:T{row}')
-    w(ws, row, 2, f'💡  ANÁLISIS CLAUDE — {marca_nombre.upper()}',
+    w(ws, row, 2, f'💡  Análisis Claude — {marca_nombre}',
       bold=True, fg='FFFFFF', bg='1A3A5C', align='left', size=11)
     ws.row_dimensions[row].height = 26
     row += 1
@@ -69,7 +69,7 @@ def write_insights_section(ws, row, marca_nombre, insights):
     ws.merge_cells(f'D{row}:G{row}')
     ws.merge_cells(f'H{row}:L{row}')
     ws.merge_cells(f'M{row}:T{row}')
-    for col, lbl in [(2,'CAMPAÑA'),(3,'TIPO'),(4,'TÍTULO DEL HALLAZGO'),(8,'DESCRIPCIÓN'),(13,'ACCIÓN RECOMENDADA')]:
+    for col, lbl in [(2,'Campaña'),(3,'Tipo'),(4,'Hallazgo'),(8,'Descripción'),(13,'Acción recomendada')]:
         w(ws, row, col, lbl, bold=True, fg='FFFFFF', bg='2C3E50', align='center', size=9)
     ws.row_dimensions[row].height = 20
     row += 1
@@ -183,7 +183,7 @@ for marca_data in marcas_list:
     insights     = marca_data.get('insights', {})
 
     ws.merge_cells(f'B{row}:T{row}')
-    w(ws,row,2,marca_nombre,bold=True,fg='FFFFFF',bg='2C3E50',align='left',size=11)
+    w(ws,row,2,marca_nombre.upper(),bold=True,fg='FFFFFF',bg='2C3E50',align='left',size=11)
     ws.row_dimensions[row].height=24
     row+=1
 
@@ -195,7 +195,7 @@ for marca_data in marcas_list:
 
     for camp_name,ads in camps.items():
         ws.merge_cells(f'B{row}:T{row}')
-        w(ws,row,2,f'▶ {camp_name}',bold=True,fg='FFFFFF',bg='34495E',align='left',size=10)
+        w(ws,row,2,f'▸ {camp_name}',bold=True,fg='FFFFFF',bg='34495E',align='left',size=10)
         ws.row_dimensions[row].height=22
         row+=1
 
