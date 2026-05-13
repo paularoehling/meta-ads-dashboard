@@ -184,6 +184,25 @@ body{background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--dk);min-h
 /* NO DATA */
 .empty{padding:32px;text-align:center;color:var(--lt);font-size:13px}
 
+/* INSIGHTS CLAUDE */
+.ins-section{padding:10px 14px 12px;border-top:0.5px solid var(--bdr);background:var(--bg)}
+.ins-hdr{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--lt);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.ins-hdr svg{width:11px;height:11px;flex-shrink:0}
+.hallazgo-card{border-radius:8px;padding:9px 11px;margin-bottom:6px;border:0.5px solid transparent}
+.hallazgo-card.alerta{background:var(--red50);border-color:var(--red100)}
+.hallazgo-card.oportunidad{background:var(--green50);border-color:var(--green100)}
+.hallazgo-card.insight{background:var(--blue50);border-color:var(--blue100)}
+.hallazgo-tipo{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
+.hallazgo-card.alerta .hallazgo-tipo{color:var(--red400)}
+.hallazgo-card.oportunidad .hallazgo-tipo{color:var(--green400)}
+.hallazgo-card.insight .hallazgo-tipo{color:var(--blue400)}
+.hallazgo-titulo{font-size:12px;font-weight:600;color:var(--dk);margin-bottom:4px;line-height:1.3}
+.hallazgo-desc{font-size:11px;color:var(--mid);line-height:1.5;margin-bottom:6px}
+.hallazgo-accion-lbl{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--lt);margin-bottom:2px}
+.hallazgo-accion{font-size:11px;color:var(--dk);background:rgba(255,255,255,.75);border-radius:6px;padding:5px 8px;line-height:1.4;font-weight:500}
+.brand-resumen{font-size:12px;color:var(--mid);line-height:1.6;padding:10px 14px;background:var(--bg);border:0.5px solid var(--bdr);border-radius:var(--radius);margin-bottom:16px;font-style:italic;display:flex;gap:8px;align-items:flex-start}
+.brand-resumen-icon{flex-shrink:0;font-size:13px}
+
 /* HISTORIAL */
 .hist-section{margin-top:32px;padding-top:20px;border-top:0.5px solid var(--bdr)}
 .hist-label{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--lt);text-transform:uppercase;margin-bottom:10px}
@@ -551,6 +570,50 @@ function parseExcel(buffer){
       if(!c.status) c.status='✅ OK';
     });
   });
+
+  // ── Parse insights Claude from Excel ────────────────────────────
+  const insMap={};
+  let inIns=false,insMarca=null,insCamp=null,insResumenDone=false;
+  for(let i=startRow;i<rows.length;i++){
+    const row=rows[i];
+    const b=String(row[1]||'').trim();
+    if(!b) continue;
+    if(b.startsWith('💡')){
+      inIns=true; insResumenDone=false; insCamp=null;
+      const m=b.match(/—\s*(.+)$/);
+      insMarca=m?m[1].trim():null;
+      if(insMarca) insMap[insMarca.toUpperCase()]={resumen:'',hallazgos:[]};
+      continue;
+    }
+    if(!inIns||!insMarca) continue;
+    const ins=insMap[insMarca.toUpperCase()];
+    // Reset if we hit a new brand section
+    if(b&&b===b.toUpperCase()&&b.length>1&&!/\d/.test(b)){inIns=false;insMarca=null;continue;}
+    const colC=String(row[2]||'').trim();
+    if(!insResumenDone&&!colC&&b.length>15&&b.toLowerCase()!=='campaña'){
+      ins.resumen=b; insResumenDone=true; continue;
+    }
+    if(b.toLowerCase()==='campaña') continue; // header row
+    if(colC.includes('🔴')||colC.includes('🟢')||colC.includes('🔵')){
+      if(b) insCamp=b;
+      const tipo=colC.includes('🔴')?'alerta':colC.includes('🟢')?'oportunidad':'insight';
+      ins.hallazgos.push({camp:insCamp||'',tipo,titulo:String(row[3]||'').trim(),desc:String(row[7]||'').trim(),accion:String(row[12]||'').trim()});
+    }
+  }
+  // Attach hallazgos and resumen to each marca/campaign
+  marcas.forEach(m=>{
+    const ins=insMap[m.nombre.toUpperCase()];
+    if(!ins) return;
+    m.insightResumen=ins.resumen;
+    m.campanas.forEach(c=>{
+      c.hallazgos=ins.hallazgos.filter(h=>{
+        const hc=(h.camp||'').toLowerCase().trim();
+        const cn=(c.nombre||'').toLowerCase().trim();
+        return hc&&(hc===cn||cn.includes(hc)||hc.includes(cn.slice(0,30)));
+      });
+    });
+  });
+
   return marcas;
 }
 
@@ -689,6 +752,10 @@ function renderContent(){
       <div class="stat-delta neutral">requieren acción</div>
     </div>
   </div>`;
+
+  if(marca.insightResumen){
+    html+=`<div class="brand-resumen"><span class="brand-resumen-icon">💡</span><span>${marca.insightResumen}</span></div>`;
+  }
 
   if(activeTab==='urgente'){
     const pausar=campanas.filter(c=>c.status&&c.status.toUpperCase().includes('PAUSAR'));
@@ -871,6 +938,27 @@ function renderCamp(c, forceOpen){
     adsHtml+='</div>';
   }
 
+  const hasInsights=c.hallazgos&&c.hallazgos.length>0;
+  const forceOpenCard=hasProblem||hasInsights;
+  let insHtml='';
+  if(hasInsights){
+    insHtml=`<div class="ins-section">
+      <div class="ins-hdr">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><line x1="8" y1="6" x2="8" y2="6"/><line x1="8" y1="9" x2="8" y2="12"/></svg>
+        Análisis Claude
+      </div>`;
+    c.hallazgos.forEach(h=>{
+      const tag=h.tipo==='alerta'?'🔴 Alerta':h.tipo==='oportunidad'?'🟢 Oportunidad':'🔵 Insight';
+      insHtml+=`<div class="hallazgo-card ${h.tipo}">
+        <div class="hallazgo-tipo">${tag}</div>
+        <div class="hallazgo-titulo">${h.titulo}</div>
+        ${h.desc?`<div class="hallazgo-desc">${h.desc}</div>`:''}
+        ${h.accion?`<div class="hallazgo-accion-lbl">Acción</div><div class="hallazgo-accion">${h.accion}</div>`:''}
+      </div>`;
+    });
+    insHtml+='</div>';
+  }
+
   return `<div class="camp-card">
     <div class="camp-hdr" onclick="toggleCamp('${campId}','${campId}-chev')">
       <div class="camp-type-icon">${typeIcon(c.tipo)}</div>
@@ -881,14 +969,15 @@ function renderCamp(c, forceOpen){
       <div class="camp-right">
         <span class="camp-spend">${fmtK(c.gasto)}</span>
         <span class="status-pill ${ev.cls}">${statusLabel(c.status)}</span>
-        <svg id="${campId}-chev" class="chev${hasProblem?' open':''}" viewBox="0 0 16 16"><polyline points="6,4 10,8 6,12"/></svg>
+        <svg id="${campId}-chev" class="chev${forceOpenCard?' open':''}" viewBox="0 0 16 16"><polyline points="6,4 10,8 6,12"/></svg>
       </div>
     </div>
-    <div id="${campId}" style="display:${hasProblem?'block':'none'}">
+    <div id="${campId}" style="display:${forceOpenCard?'block':'none'}">
       <div style="padding:8px 16px 12px;border-top:0.5px solid var(--bdr);margin-top:8px">
         <div style="font-size:12px;color:var(--mid);line-height:1.6">${ev.desc}</div>
       </div>
       ${adsHtml}
+      ${insHtml}
     </div>
   </div>`;
 }
