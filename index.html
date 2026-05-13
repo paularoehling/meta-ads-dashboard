@@ -572,12 +572,14 @@ function parseExcel(buffer){
   });
 
   // ── Parse insights Claude from Excel ────────────────────────────
+  // XLSX.js {header:1} starts at index 0 = col B (first used column).
+  // dynCol.CAMP == 0 (col B). Offsets: tipo=+1(C), titulo=+2(D), desc=+6(H), accion=+11(M)
   const insMap={};
   let inIns=false,insMarca=null,insCamp=null,insResumenDone=false;
+  const CI=dynCol.CAMP; // col B = index 0
   for(let i=startRow;i<rows.length;i++){
     const row=rows[i];
-    const b=String(row[1]||'').trim();
-    if(!b) continue;
+    const b=String(row[CI]||'').trim();   // col B
     if(b.startsWith('💡')){
       inIns=true; insResumenDone=false; insCamp=null;
       const m=b.match(/—\s*(.+)$/);
@@ -585,22 +587,30 @@ function parseExcel(buffer){
       if(insMarca) insMap[insMarca.toUpperCase()]={resumen:'',hallazgos:[]};
       continue;
     }
-    if(!inIns||!insMarca) continue;
+    if(!inIns||!insMarca){if(!b)continue; continue;}
+    // In insights mode — process even when col B is empty (subsequent hallazgos)
     const ins=insMap[insMarca.toUpperCase()];
-    // Reset if we hit a new brand section
+    const colTipo=String(row[CI+1]||'').trim(); // col C
+    // Exit insights if we hit a new uppercase brand row
     if(b&&b===b.toUpperCase()&&b.length>1&&!/\d/.test(b)){inIns=false;insMarca=null;continue;}
-    const colC=String(row[2]||'').trim();
-    if(!insResumenDone&&!colC&&b.length>15&&b.toLowerCase()!=='campaña'){
+    // Resumen row: col B has text, col C empty
+    if(!insResumenDone&&b&&!colTipo&&b.length>15&&b.toLowerCase()!=='campaña'){
       ins.resumen=b; insResumenDone=true; continue;
     }
-    if(b.toLowerCase()==='campaña') continue; // header row
-    if(colC.includes('🔴')||colC.includes('🟢')||colC.includes('🔵')){
+    if(b.toLowerCase()==='campaña') continue; // column header row
+    // Hallazgo rows — identified by tipo emoji in col C (even if col B is empty)
+    if(colTipo.includes('🔴')||colTipo.includes('🟢')||colTipo.includes('🔵')){
       if(b) insCamp=b;
-      const tipo=colC.includes('🔴')?'alerta':colC.includes('🟢')?'oportunidad':'insight';
-      ins.hallazgos.push({camp:insCamp||'',tipo,titulo:String(row[3]||'').trim(),desc:String(row[7]||'').trim(),accion:String(row[12]||'').trim()});
+      const tipo=colTipo.includes('🔴')?'alerta':colTipo.includes('🟢')?'oportunidad':'insight';
+      ins.hallazgos.push({
+        camp:insCamp||'',tipo,
+        titulo:String(row[CI+2]||'').trim(),   // col D
+        desc:  String(row[CI+6]||'').trim(),   // col H
+        accion:String(row[CI+11]||'').trim()   // col M
+      });
     }
   }
-  // Attach hallazgos and resumen to each marca/campaign
+  // Attach resumen and hallazgos to each marca/campaña
   marcas.forEach(m=>{
     const ins=insMap[m.nombre.toUpperCase()];
     if(!ins) return;
