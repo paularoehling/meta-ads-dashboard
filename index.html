@@ -203,6 +203,27 @@ body{background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--dk);min-h
 .brand-resumen{font-size:12px;color:var(--mid);line-height:1.6;padding:10px 14px;background:var(--bg);border:0.5px solid var(--bdr);border-radius:var(--radius);margin-bottom:16px;font-style:italic;display:flex;gap:8px;align-items:flex-start}
 .brand-resumen-icon{flex-shrink:0;font-size:13px}
 
+/* REPORTE CLAUDE TABLE */
+.claude-report{margin-top:32px;border:0.5px solid var(--bdr);border-radius:var(--radius-lg);overflow:hidden}
+.claude-report-hdr{background:var(--dk);padding:14px 18px;display:flex;align-items:center;gap:8px}
+.claude-report-hdr-title{font-size:12px;font-weight:600;color:#fff;letter-spacing:.04em}
+.claude-report-resumen{font-size:12px;color:var(--mid);line-height:1.6;padding:12px 18px;background:var(--bg);border-bottom:0.5px solid var(--bdr);font-style:italic}
+.claude-report table{width:100%;border-collapse:collapse}
+.claude-report th{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--lt);padding:9px 14px;background:var(--sur);border-bottom:0.5px solid var(--bdr);text-align:left}
+.claude-report td{font-size:12px;padding:10px 14px;vertical-align:top;border-bottom:0.5px solid var(--bdr);line-height:1.5;color:var(--dk)}
+.claude-report tr:last-child td{border-bottom:none}
+.claude-report tr.alerta td{background:#FEF8F8}
+.claude-report tr.oportunidad td{background:#F5FCF7}
+.claude-report tr.insight td{background:#F4F9FE}
+.cr-camp{font-size:11px;color:var(--lt);font-weight:500}
+.cr-tipo{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:20px;white-space:nowrap}
+.cr-tipo.alerta{background:var(--red100);color:var(--red800)}
+.cr-tipo.oportunidad{background:var(--green100);color:var(--green800)}
+.cr-tipo.insight{background:var(--blue100);color:var(--blue800)}
+.cr-titulo{font-weight:600;color:var(--dk);margin-bottom:3px;font-size:12px}
+.cr-desc{font-size:11px;color:var(--mid);line-height:1.5}
+.cr-accion{font-size:11px;font-weight:500;color:var(--dk);background:rgba(255,255,255,.8);border-radius:6px;padding:5px 8px;margin-top:4px;border:0.5px solid var(--bdr)}
+
 /* HISTORIAL */
 .hist-section{margin-top:32px;padding-top:20px;border-top:0.5px solid var(--bdr)}
 .hist-label{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--lt);text-transform:uppercase;margin-bottom:10px}
@@ -855,6 +876,38 @@ function renderContent(){
     }
   }
 
+  // REPORTE ANÁLISIS CLAUDE
+  const allHallazgos=marca.campanas.reduce((acc,c)=>acc.concat((c.hallazgos||[]).map(h=>({...h,campNombre:c.nombre}))),[]);
+  if(allHallazgos.length){
+    const marcaDisplay2=marca.nombre.charAt(0)+marca.nombre.slice(1).toLowerCase();
+    html+=`<div class="claude-report">
+      <div class="claude-report-hdr">
+        <span style="font-size:15px">💡</span>
+        <span class="claude-report-hdr-title">Reporte de Análisis Claude — ${marcaDisplay2}</span>
+      </div>`;
+    if(marca.insightResumen) html+=`<div class="claude-report-resumen">${marca.insightResumen}</div>`;
+    html+=`<table>
+      <thead><tr>
+        <th style="width:18%">Campaña</th>
+        <th style="width:8%">Tipo</th>
+        <th style="width:22%">Hallazgo</th>
+        <th style="width:30%">Descripción</th>
+        <th style="width:22%">Acción recomendada</th>
+      </tr></thead>
+      <tbody>`;
+    allHallazgos.forEach(h=>{
+      const tag=h.tipo==='alerta'?'🔴 Alerta':h.tipo==='oportunidad'?'🟢 Oport.':'🔵 Insight';
+      html+=`<tr class="${h.tipo}">
+        <td><span class="cr-camp">${h.campNombre}</span></td>
+        <td><span class="cr-tipo ${h.tipo}">${tag}</span></td>
+        <td><div class="cr-titulo">${h.titulo}</div></td>
+        <td><div class="cr-desc">${h.desc}</div></td>
+        <td><div class="cr-accion">${h.accion}</div></td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div>`;
+  }
+
   // HISTORIAL
   html+=`<div class="hist-section">
     <div class="hist-label">Historial de reportes</div>
@@ -913,7 +966,7 @@ function renderCamp(c, forceOpen){
   const ev=tipo.evaluar(c);
   const campId='camp-'+Math.random().toString(36).slice(2);
   const ads=c.anuncios.filter(a=>a.gasto>0);
-  const bestAd=ads.length?ads.reduce((b,a)=>(!b||(a.costoPorR>0&&a.costoPorR<(b.costoPorR||999999)))?a:b,null):null;
+  const bestAd=ads.length?ads.reduce((b,a)=>(!b||(a.resultados>(b.resultados||0)))?a:b,null):null;
   const worstAd=ads.length>1?ads.reduce((w,a)=>(!w||(a.costoPorR>0&&a.costoPorR>(w.costoPorR||0)))?a:w,null):null;
   const hasProblem=ev.cls==='pausar'||ev.cls==='revisar';
   const cols='1fr 72px 72px 55px 72px 55px 62px';
